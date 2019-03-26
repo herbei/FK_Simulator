@@ -30,7 +30,7 @@ KY=200
 
 
 
-NOBS = 300
+NOBS = 200
 
 # generate some spatial locations where simulator will run
 sites= matrix(0, nrow=NOBS, ncol=2)
@@ -43,7 +43,7 @@ for(i in 1:NOBS){
 #this is needed only for the boundary values
 OXY = as.matrix(read.table('oxygengrid.txt'))
 
-NPATHS = 256
+NPATHS = 200
 
 
 #run FK simulator
