@@ -1,7 +1,7 @@
 # FK_Simulator
 
 
-The R files are fairly easy to follow and run. On my laptop it takes 43 seconds to run.
+The R files are fairly easy to follow and run. On my laptop it takes 43 seconds to run (with NOBS = 200 and NPATHS=200). I am sure the code can be improved a lot -- R is not my forte though.
 
 The C code will require a GPU. To compile are run the code, edit the Makefile:
  - edit the path to your CUDA libraries
