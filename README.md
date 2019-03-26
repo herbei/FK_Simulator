@@ -11,6 +11,6 @@ The C code will require a GPU. To compile are run the code, edit the Makefile:
 For comparison, the C code takes about 0.6 seconds to run.
 
 IMPORTANT:
-The C code will not run for ALL combinations of NOBS and NPATHS. This is a limitation of the random number generator in CUDA (and possibly due to my weak coding ability). I will look into this further, but for now it seems that NOBS = 200 and NPATHS = 200 is the max. One could increase one variable and decrease the other and it the code will likely run OK. Apologies that this is too vague.
+The C code will not run for ALL combinations of NOBS and NPATHS. This is a limitation of the random number generator in CUDA (and possibly due to my weak coding ability). I will look into this further, but for now it seems that NOBS = 200 and NPATHS = 200 is the max. One could increase one variable and decrease the other and it the code will likely run OK. Apologies that this is too vague. This is also related to the long-standing question: what is the optimal combination of blocks / threads per block to use - I don't have an answer for that.
  
  I've included MATLAB code for plotting.
