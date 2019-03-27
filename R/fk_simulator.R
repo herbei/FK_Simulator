@@ -62,6 +62,16 @@ library(MASS)
 write.matrix(OXYFK, "oxygen_fk.txt", sep = ",")
 
 
+## - thanks Pierre.
+OXYFKdf = as.data.frame(OXYFK)
+names(OXYFKdf) = c("long","lat","oxy")
+library(ggplot2)
+plotfk = ggplot(OXYFKdf, aes(x=long, y=lat, color=oxy)) + geom_point()+scale_color_gradient(low="blue", high="red")
+plotfk
+
+
+
+
 ####################################################################
 fk_simulator  = function(domain, sites, U, V, KX, KY, OXY, NPATHS){
   
