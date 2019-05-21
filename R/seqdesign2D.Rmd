@@ -1,0 +1,73 @@
+---
+title: "Seq design 2D"
+author: "Pierre Barbillon"
+date: "07/05/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,echo=FALSE)
+load("Designseq2D.Rdata")
+library(ggplot2)
+library(colorRamps)
+library(hetGP)
+designseq = as.data.frame(cbind(mod$X0,mod$mult))
+names(designseq) = c("long","lat","rep")
+```
+
+
+
+
+Design in 2D (longitude and latitude for site locations). The diffusion parameters are fixed to $K_x=700$ and $K_y=200$.
+
+
+## Plots for homGP
+
+2D
+```{r plot homgp}
+ggplot(gridHom, aes(long, lat)) + geom_raster(aes(fill = mean), interpolate = TRUE) + scale_fill_gradientn(colours=matlab.like(10),limits=c(min(gridHom$mean,gridhet$mean),max(gridHom$mean,gridhet$mean)))
+ggplot(gridHom, aes(long, lat)) + geom_raster(aes(fill = varmean), interpolate = TRUE)+ scale_fill_gradientn(colours=matlab.like(10),limits=c(min(gridHom$varmean,gridhet$varmean),max(gridHom$varmean,gridhet$varmean)))
+```
+
+Slice with middle location for longitude
+
+```{r slice homgp}
+islice = which(gridHom$long==.5)
+ggplot(gridHom[islice,],aes(x=lat,y=mean)) +theme_bw()+
+  geom_ribbon(aes(ymin = mean-2*sqrt(varmean+nug), ymax = mean+2*sqrt(varmean+nug),fill="prediction"))+geom_ribbon(aes(ymin = mean-2*sqrt(varmean), ymax = mean+2*sqrt(varmean),fill="confidence"))+scale_fill_manual("",values=c("steelblue","lightpink"))+geom_line(aes(x=lat,y=mean,colour="mean"))+scale_colour_manual("",values="black")
+```
+
+
+
+## Plots for hetGP
+
+2D
+```{r plot hetgp}
+ggplot(gridhet, aes(long, lat)) + geom_raster(aes(fill = mean), interpolate = TRUE) +scale_fill_gradientn(colours=matlab.like(10),limits=c(min(gridHom$mean,gridhet$mean),max(gridHom$mean,gridhet$mean)))
+ggplot(gridhet, aes(long, lat)) + geom_raster(aes(fill = varmean), interpolate = TRUE) + scale_fill_gradientn(colours=matlab.like(10),limits=c(min(gridHom$varmean,gridhet$varmean),max(gridHom$varmean,gridhet$varmean)))
+ggplot(gridhet, aes(long, lat)) + geom_raster(aes(fill = nug), interpolate = TRUE) +scale_fill_gradientn(colours=matlab.like(10))
+```
+
+
+Slice with middle location for longitude
+
+```{r slice hetgp}
+ggplot(gridhet[islice,],aes(x=lat,y=mean)) +theme_bw()+
+  geom_ribbon(aes(ymin = mean-2*sqrt(varmean+nug), ymax = mean+2*sqrt(varmean+nug),fill="prediction"))+geom_ribbon(aes(ymin = mean-2*sqrt(varmean), ymax = mean+2*sqrt(varmean),fill="confidence"))+scale_fill_manual("",values=c("steelblue","lightpink"))+geom_line(aes(x=lat,y=mean,colour="mean"))+scale_colour_manual("",values="black")
+```
+
+
+## After adding 500 runs for hetGP
+
+Estimated nugget
+```{r seq design nug}
+ggplot(gridhetseq, aes(long, lat)) + geom_raster(aes(fill = nug), interpolate = TRUE) + scale_fill_gradientn(colours=matlab.like(10))+geom_point(data=designseq,aes(x=long,y=lat,colour=rep))+scale_color_gradient(low="grey", high="black")
+```
+
+New predictive mean
+
+```{r seq design mean}
+ggplot(gridhetseq, aes(long, lat)) + geom_raster(aes(fill = mean), interpolate = TRUE) + scale_fill_gradientn(colours=matlab.like(10))+geom_point(data=designseq,aes(x=long,y=lat,colour=rep))+scale_color_gradient(low="grey", high="black")
+```
+
+
