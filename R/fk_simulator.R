@@ -43,6 +43,9 @@ for(i in 1:NOBS){
 #this is needed only for the boundary values
 OXY = as.matrix(read.table('oxygengrid.txt'))
 
+
+#save(OXY,domain,U,V,file = "fksettings.Rdata")
+
 NPATHS = 200
 
 
@@ -51,12 +54,28 @@ start_time <- Sys.time()
 OUT = fk_simulator(domain, sites, U, V, KX, KY, OXY, NPATHS)
 Sys.time() - start_time
 
+OUTtrue = OUT
+sitestrue = sites 
+#save(OUTtrue,sitestrue,file="RUN_700_200.Rdata")
+
+# replication
+OUT2 = fk_simulator(domain, sites, U, V, KX, KY, OXY, NPATHS)
+
 
 OXYFK = matrix(0, nrow = NOBS, ncol = 3)
 for(i in 1:NOBS){
   OXYFK[i,1:2] = sites[i,]
   OXYFK[i,3] = mean(OUT[i,])
 }
+
+OXYFK
+
+
+library(DiceKriging)
+
+
+
+
 
 library(MASS)
 write.matrix(OXYFK, "oxygen_fk.txt", sep = ",")
@@ -67,6 +86,14 @@ names(OXYFKdf) = c("long","lat","oxy")
 library(ggplot2)
 plotfk = ggplot(OXYFKdf, aes(x=long, y=lat, color=oxy)) + geom_point()+scale_color_gradient(low="blue", high="red")
 plotfk
+
+# voir variance
+
+OXYFKdf = cbind(OXYFKdf,apply(OUT,1,sd))
+names(OXYFKdf)[4] = "sd"  
+plotfksd = ggplot(OXYFKdf, aes(x=long, y=lat, color=sd)) + geom_point()+scale_color_gradient(low="blue", high="red")
+plotfksd
+
 
 
 ## - thanks Pierre.

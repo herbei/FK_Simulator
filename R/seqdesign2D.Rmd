@@ -13,6 +13,8 @@ library(colorRamps)
 library(hetGP)
 designseq = as.data.frame(cbind(mod$X0,mod$mult))
 names(designseq) = c("long","lat","rep")
+gridHom$psd = sqrt(gridHom$nug+gridHom$varmean)
+gridhet$psd = sqrt(gridhet$nug+gridhet$varmean)
 ```
 
 
@@ -38,6 +40,17 @@ ggplot(gridHom[islice,],aes(x=lat,y=mean)) +theme_bw()+
 ```
 
 
+Plot for nugget + predictive mean variance (in standard deviation)
+
+
+```{r psdhom}
+ggplot(gridHom, aes(long, lat)) + geom_raster(aes(fill = psd), interpolate = TRUE)+ scale_fill_gradientn(colours=matlab.like(10),limits=c(min(gridHom$psd,gridhet$psd),max(gridHom$psd,gridhet$psd)))
+```
+
+
+
+
+
 
 ## Plots for hetGP
 
@@ -57,6 +70,12 @@ ggplot(gridhet[islice,],aes(x=lat,y=mean)) +theme_bw()+
 ```
 
 
+Plot for nugget + predictive mean variance (in standard deviation)
+
+```{r psdhet}
+ggplot(gridhet, aes(long, lat)) + geom_raster(aes(fill = psd), interpolate = TRUE)+ scale_fill_gradientn(colours=matlab.like(10),limits=c(min(gridHom$psd,gridhet$psd),max(gridHom$psd,gridhet$psd)))
+```
+
 ## After adding 500 runs for hetGP
 
 Estimated nugget
@@ -70,4 +89,25 @@ New predictive mean
 ggplot(gridhetseq, aes(long, lat)) + geom_raster(aes(fill = mean), interpolate = TRUE) + scale_fill_gradientn(colours=matlab.like(10))+geom_point(data=designseq,aes(x=long,y=lat,colour=rep))+scale_color_gradient(low="grey", high="black")
 ```
 
+
+m
+
+
+Plot for nugget + predictive mean variance (in standard deviation)
+
+```{r psdhetseq}
+ggplot(gridhetseq, aes(long, lat)) + geom_raster(aes(fill = psd), interpolate = TRUE)+ scale_fill_gradientn(colours=matlab.like(10))+geom_point(data=designseq,aes(x=long,y=lat,colour=rep))+scale_color_gradient(low="grey", high="black")
+```
+
+Predictive mean variance after adding the points sequentially
+
+```{r varmean seq}
+ggplot(gridhetseq, aes(long, lat)) + geom_raster(aes(fill = varmean ), interpolate = TRUE)+ scale_fill_gradientn(colours=matlab.like(10))+geom_point(data=designseq,aes(x=long,y=lat,colour=rep))+scale_color_gradient(low="grey", high="black")
+```
+
+
+predictive mean variance before adding the points sequentially
+```{r varmean seq before adding}
+ggplot(gridhet, aes(long, lat)) + geom_raster(aes(fill = varmean ), interpolate = TRUE)+ scale_fill_gradientn(colours=matlab.like(10))+geom_point(data=designseq,aes(x=long,y=lat,colour=rep))+scale_color_gradient(low="grey", high="black")
+```
 
