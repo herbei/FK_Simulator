@@ -31,8 +31,9 @@ msehom = mean(((predhom$mean-vm)/vm)^2)
 msehet = mean(((predhet$mean-vm)/vm)^2)
 msehetseq = mean(((predHetseq$mean-vm)/vm)^2)
 
-
-boxplot(cbind(((predhom$mean-vm)/vm)^2,((predhet$mean-vm)/vm)^2,((predHetseq$mean-vm)/vm)^2),ylim=c(0,5e-4))
+dfmse = as.data.frame(cbind(((predhom$mean-vm)/vm)^2,((predhet$mean-vm)/vm)^2,((predHetseq$mean-vm)/vm)^2))
+names(dfmse) = c("hom","het","seqhet")
+boxplot(dfmse,ylim=c(0,5e-4),main="MSE")
 
 
 # scores
@@ -40,7 +41,10 @@ schom = mean(-(vm-predhom$mean)^2/(predhom$sd2) -log(predhom$sd2))
 schet = mean(-(vm-predhet$mean)^2/(predhet$sd2) -log(predhet$sd2))
 schetseq = mean(-(vm-predHetseq$mean)^2/(predHetseq$sd2) -log(predHetseq$sd2))
 
-boxplot(cbind(-(vm-predhom$mean)^2/(predhom$sd2) -log(predhom$sd2),-(vm-predhet$mean)^2/(predhet$sd2) -log(predhet$sd2),-(vm-predHetseq$mean)^2/(predHetseq$sd2) -log(predHetseq$sd2)),ylim=c(-20,2))
+
+dfscore = as.data.frame(cbind(-(vm-predhom$mean)^2/(predhom$sd2) -log(predhom$sd2),-(vm-predhet$mean)^2/(predhet$sd2) -log(predhet$sd2),-(vm-predHetseq$mean)^2/(predHetseq$sd2) -log(predHetseq$sd2)))
+names(dfscore) = c("hom","het","seqhet")
+boxplot(dfscore,ylim=c(-20,2),main="scores")
 
 
 
