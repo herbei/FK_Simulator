@@ -94,7 +94,7 @@ fk_simulator  = function(domain, sites, U, V, KX, KY, OXY, NPATHS){
 
 # function to be called by IMSPE_optim
 # v has dim 4: 2 first dimensions are long, lat, then KX and KY diffusion coefficients
-simulator = function(v,NPATHS=1) 
+simulator = function(v,NPATHS=10) 
 {
   #unnormalize
   long = v[1] * (domain[2]-domain[1]) + domain[1]
@@ -104,26 +104,32 @@ simulator = function(v,NPATHS=1)
   KX = 700
   KY = 200
     
-  fk_simulator(domain, matrix(c(long,lat),nrow=1), U, V, KX,KY, OXY, NPATHS)
+  sim = fk_simulator(domain, matrix(c(long,lat),nrow=1), U, V, KX,KY, OXY, NPATHS)
+  return(mean(sim))
 }
 
 
 # space filling design
 library(DiceDesign)
-n = 40
+n = 50
 X = lhsDesign(n,2)
 X = maximinSA_LHS(X$design)$design
 plot(X)
 
 # running simulator with ten replicates
-Nrep = 20
-out = sapply(1:nrow(X), function(i)
-  {simulator(X[i,],NPATHS=Nrep)})
-out = t(out)
-dim(out)
+
+Nrep=20
+out = matrix(NA,n,Nrep)
+for (i in 1:n)
+  for (j in 1:Nrep)
+    out[i,j] = simulator(X[i,])
+    
+# out = sapply(rep(1:nrow(X),each=Nrep), function(i)
+#   {simulator(X[i,])})
+# out = t(out)
+# dim(out)
 
 meanOUT = apply(out,1,mean)
-
 
 library(hetGP)
 dimX = 2
@@ -168,12 +174,13 @@ ggplot(gridhet[islice,],aes(x=lat,y=mean)) +theme_bw()+
 Xinit = X
 
 # seq design
+nadd=500
 mod = Ghet
 Y = matrix(t(out),Nrep*nrow(X),1,byrow = T)
-h <- rep(NA, 500)
+h <- rep(NA, nadd)
 #dim(Y)
 
-for(i in 1:500) { 
+for(i in 1:nadd) { 
   h[i] <- horizon(mod)
   opt <- IMSPE_optim(mod, h[i])
   cat("i=", i, ", h=", h[i], "\n", sep="")
@@ -187,16 +194,19 @@ for(i in 1:500) {
   }
   #print(g)
 }
-#save.image(file="Designseq2D.Rdata")
+#save.image(file="Designseq2Dbisafterseq500.Rdata")
+
+#save.image(file="designseq2D10paths2.Rdata")
 
 
-designseq = as.data.frame(cbind(mod$X0,mod$mult))
 names(designseq) = c("long","lat","rep")
+designseq = as.data.frame(cbind(mod$X0,mod$mult))
 predhetseqde = predict(x = de, object = mod)
 gridhetseq = as.data.frame(cbind(de[,1:2],predhetseqde$mean,predhetseqde$sd2,predhetseqde$nugs, sqrt(predhetseqde$sd2 + predhetseqde$nugs)))
 names(gridhetseq) = c("long","lat","mean","varmean","nug","psd")
 
-#save.image(file="Designseq2D.Rdata")
+#save.image(file="Designseq2Dds.Rdata")
+
 
 g <- ggplot(gridhetseq, aes(long, lat)) + geom_raster(aes(fill = psd), interpolate = TRUE) +scale_fill_gradientn(colours=matlab.like(10)) +geom_point(data=designseq,aes(x=long,y=lat,colour=rep))+scale_color_gradient(low="grey", high="black")
 print(g)
