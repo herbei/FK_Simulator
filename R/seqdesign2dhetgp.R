@@ -1,6 +1,6 @@
 rm(list=ls())
 
-set.seed(123)
+set.seed(1234)
 
 ## fct definitions and loading some parameters
 load("fksettings.Rdata")
@@ -94,7 +94,7 @@ fk_simulator  = function(domain, sites, U, V, KX, KY, OXY, NPATHS){
 
 # function to be called by IMSPE_optim
 # v has dim 4: 2 first dimensions are long, lat, then KX and KY diffusion coefficients
-simulator = function(v,NPATHS=10) 
+simulator = function(v,NPATHS=20) 
 {
   #unnormalize
   long = v[1] * (domain[2]-domain[1]) + domain[1]
@@ -118,7 +118,7 @@ plot(X)
 
 # running simulator with ten replicates
 
-Nrep=20
+Nrep = 20
 out = matrix(NA,n,Nrep)
 for (i in 1:n)
   for (j in 1:Nrep)
@@ -129,17 +129,44 @@ for (i in 1:n)
 # out = t(out)
 # dim(out)
 
+# normalization
+load("testdesign2D.Rdata")
+n=nrow(out)
+Mnorm = mean(vm)
+SDnorm = sd(vm)
+out=(((out)-Mnorm)/SDnorm)
+dim(out)
+
 meanOUT = apply(out,1,mean)
 
 library(hetGP)
 dimX = 2
 
+# Bobby's settings 
+lower <- rep(0.01, 2)
+upper <- rep(30, 2)
+covtype <- "Matern5_2"
+nc <- list(g_min=1e-6, g_bounds=c(1e-6, 1), # k_theta_g_bounds=c(1,10), 
+           lowerDelta=log(1e-6))
+settings <- list(linkThetas="none", logN=TRUE, initStrategy="smoothed", 
+                 checkHom=TRUE, penalty=TRUE, trace=0, return.matrices=TRUE, return.hom=FALSE)
+control <- list(tol_dist=1e-4, tol_diff=1e-4, multi.start=30)
+
+
+Z= matrix((out),Nrep*nrow(X),1,byrow = T)
+Xrep = X
+for (i in 1:(Nrep-1))
+{Xrep=rbind(Xrep,X)}
 
 # Homoskedastic
-Ghom = mleHomGP(list(X0=X,Z0=meanOUT,mult=rep(Nrep,nrow(X))),Z= matrix(t(out),Nrep*nrow(X),1,byrow = T),lower = rep(0.01, dimX), upper = rep(10, dimX),covtype = "Gaussian",maxit=1000) 
+#Ghom = mleHomGP(list(X0=X,Z0=meanOUT,mult=rep(Nrep,nrow(X))),Z= matrix(t(out),Nrep*nrow(X),1,byrow = T),lower = rep(0.01, dimX), upper = rep(10, dimX),covtype = "Gaussian",maxit=1000) 
+Ghom = mleHomGP(Xrep, Z, lower=lower, upper=upper, covtype=covtype,
+         known=list(beta0=0), maxit=1000) 
 
 # Heteroskedastic 
-Ghet = mleHetGP(list(X0=X,Z0=meanOUT,mult=rep(Nrep,nrow(X))),Z= matrix(t(out),Nrep*nrow(X),1,byrow = T),lower = rep(0.01, dimX), upper = rep(10, dimX),covtype = "Gaussian",maxit=1000)
+#Ghet = mleHetGP(list(X0=X,Z0=meanOUT,mult=rep(Nrep,nrow(X))),Z= matrix(t(out),Nrep*nrow(X),1,byrow = T),lower = rep(0.01, dimX), upper = rep(10, dimX),covtype = "Gaussian",maxit=1000)
+Ghet =  mleHetGP(Xrep, Z, lower=lower, upper=upper, covtype=covtype, 
+                 noiseControl=nc, settings=settings, known=list(beta0=0), maxit=1000)
 
 
 # plots 
@@ -175,21 +202,29 @@ Xinit = X
 
 # seq design
 nadd=500
-mod = Ghet
-Y = matrix(t(out),Nrep*nrow(X),1,byrow = T)
+#mod = Ghet
+Y = matrix((out),Nrep*nrow(X),1,byrow = T)
 h <- rep(NA, nadd)
 #dim(Y)
+
+Xseq <- Xrep[1:(10*n),]
+Y <- Z[1:(10*n)]
+mod <- mleHetGP(Xseq, Y, lower=lower, upper=upper, covtype=covtype, 
+                noiseControl=nc, settings=settings, known=list(beta0=0), maxit=1000)
+
 
 for(i in 1:nadd) { 
   h[i] <- horizon(mod)
   opt <- IMSPE_optim(mod, h[i])
   cat("i=", i, ", h=", h[i], "\n", sep="")
-  X <- rbind(X, opt$par)
-  Ynew <- simulator(opt$par)
+  Xseq <- rbind(Xseq, opt$par)
+  Ynew <- (simulator(opt$par)-Mnorm)/SDnorm
   Y <- c(Y, Ynew)
   mod <- update(mod, Xnew = opt$par, Znew = Ynew, ginit = mod$g * 1.01)
   if(i %% 25 == 0){
-    mod2 <- mleHetGP(X = list(X0 = mod$X0, Z0 = mod$Z0, mult = mod$mult),Z = mod$Z, lower = rep(0.01, dimX), upper = rep(10, dimX), maxit=1000)
+    mod2 <- mleHetGP(X = list(X0 = mod$X0, Z0 = mod$Z0, mult = mod$mult),Z = mod$Z, lower=lower, upper=upper, covtype=covtype, 
+                     noiseControl=nc, settings=settings, known=list(beta0=0), 
+                     maxit=1000)
     if(mod2$ll > mod$ll) mod <- mod2
   }
   #print(g)
@@ -199,8 +234,9 @@ for(i in 1:nadd) {
 #save.image(file="designseq2D10paths2.Rdata")
 
 
-names(designseq) = c("long","lat","rep")
+
 designseq = as.data.frame(cbind(mod$X0,mod$mult))
+names(designseq) = c("long","lat","rep")
 predhetseqde = predict(x = de, object = mod)
 gridhetseq = as.data.frame(cbind(de[,1:2],predhetseqde$mean,predhetseqde$sd2,predhetseqde$nugs, sqrt(predhetseqde$sd2 + predhetseqde$nugs)))
 names(gridhetseq) = c("long","lat","mean","varmean","nug","psd")

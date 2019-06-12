@@ -7,7 +7,10 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,echo=FALSE)
-load("Designseq2D.Rdata")
+#load("Designseq2D.Rdata")
+#load("Designseq2Dbis.Rdata")
+#load("designseq2D10paths2.Rdata")
+load("design2Dpath10.Rdata")
 library(ggplot2)
 library(colorRamps)
 library(hetGP)
@@ -17,11 +20,30 @@ gridHom$psd = sqrt(gridHom$nug+gridHom$varmean)
 gridhet$psd = sqrt(gridhet$nug+gridhet$varmean)
 ```
 
+```{r unnormalize}
+gridHom$mean = gridHom$mean * SDnorm + Mnorm
+gridHom$varmean = gridHom$varmean * SDnorm^2
+gridHom$psd = gridHom$psd * SDnorm
+gridHom$nug = gridHom$nug * SDnorm^2
+gridhet$mean = gridhet$mean * SDnorm + Mnorm
+gridhet$varmean = gridhet$varmean * SDnorm^2
+gridhet$psd = gridhet$psd * SDnorm
+gridhet$nug = gridhet$nug * SDnorm^2
+gridhetseq$mean = gridhetseq$mean * SDnorm + Mnorm
+gridhetseq$varmean = gridhetseq$varmean * SDnorm^2
+gridhetseq$psd = gridhetseq$psd * SDnorm
+gridhetseq$nug = gridhetseq$nug * SDnorm^2
+```
+
 
 
 
 Design in 2D (longitude and latitude for site locations). The diffusion parameters are fixed to $K_x=700$ and $K_y=200$.
 
+Sizes of the designs:
+
+  - for HomGP and HetGP: `r nrow(Ghet$X0)` unique locations with `r Ghet$mult[1]` replications each.
+  - for seqHetGP: sequential design built as a initial design with `r nrow(Ghet$X0)` unique locations with `r Ghet$mult[1]/2` replications each and $500$ added runs. The number of replications per unique location is `r (mod$mult)`.
 
 ## Plots for homGP
 
@@ -76,7 +98,10 @@ Plot for nugget + predictive mean variance (in standard deviation)
 ggplot(gridhet, aes(long, lat)) + geom_raster(aes(fill = psd), interpolate = TRUE)+ scale_fill_gradientn(colours=matlab.like(10),limits=c(min(gridHom$psd,gridhet$psd),max(gridHom$psd,gridhet$psd)))
 ```
 
-## After adding 500 runs for hetGP
+## After adding sequentially runs for hetGP
+
+Number of added runs: 500
+
 
 Estimated nugget
 ```{r seq design nug}
@@ -110,4 +135,34 @@ predictive mean variance before adding the points sequentially
 ```{r varmean seq before adding}
 ggplot(gridhet, aes(long, lat)) + geom_raster(aes(fill = varmean ), interpolate = TRUE)+ scale_fill_gradientn(colours=matlab.like(10))+geom_point(data=designseq,aes(x=long,y=lat,colour=rep))+scale_color_gradient(low="grey", high="black")
 ```
+
+
+
+## comparison for prediction
+
+```{r load data test}
+load("testdesign2D.Rdata")
+library(hetGP)
+#Hom GP
+predhom = predict(x = testdesign, object = Ghom)
+#Het GP
+predhet = predict(x = testdesign, object = Ghet)
+#Het GP seq
+predHetseq = predict(x = testdesign, object = mod)
+# RMSE
+msehom = mean(((predhom$mean-vmNorm))^2)
+msehet = mean(((predhet$mean-vmNorm))^2)
+msehetseq = mean(((predHetseq$mean-vmNorm))^2)
+# scores
+schom = mean(-(vmNorm-predhom$mean)^2/(predhom$sd2) -log(predhom$sd2))
+schet = mean(-(vmNorm-predhet$mean)^2/(predhet$sd2) -log(predhet$sd2))
+schetseq = mean(-(vmNorm-predHetseq$mean)^2/(predHetseq$sd2) -log(predHetseq$sd2))
+```
+
+
+```{r results}
+c(rmsehom=msehom,rmsehet=msehet,rmsehetse=msehetseq)
+c(scorehom=schom,scorehet=schet,scorehetse=schetseq)
+```
+
 

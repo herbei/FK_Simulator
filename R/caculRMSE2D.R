@@ -25,21 +25,26 @@ predhet = predict(x = testdesign, object = Ghet)
 predHetseq = predict(x = testdesign, object = mod)
 
 
+vmNorm = (vm-Mnorm)/SDnorm
 
 # RMSE
-msehom = mean(((predhom$mean-vm)/vm)^2)
-msehet = mean(((predhet$mean-vm)/vm)^2)
-msehetseq = mean(((predHetseq$mean-vm)/vm)^2)
+msehom = mean(((predhom$mean-vmNorm)^2))
+msehet = mean(((predhet$mean-vmNorm)^2))
+msehetseq = mean(((predHetseq$mean-vmNorm)^2))
 
-dfmse = as.data.frame(cbind(((predhom$mean-vm)/vm)^2,((predhet$mean-vm)/vm)^2,((predHetseq$mean-vm)/vm)^2))
+dfmse = as.data.frame(cbind((predhom$mean-vmNorm)^2,(predhet$mean-vmNorm)^2,(predHetseq$mean-vmNorm)^2))
 names(dfmse) = c("hom","het","seqhet")
-boxplot(dfmse,ylim=c(0,5e-4),main="MSE")
+boxplot(dfmse,main="MSE",ylim=c(0,.2))
+
+which(dfmse$seqhet>1000)
+dfmse[383,]
+vmNorm[383]
 
 
 # scores
-schom = mean(-(vm-predhom$mean)^2/(predhom$sd2) -log(predhom$sd2))
-schet = mean(-(vm-predhet$mean)^2/(predhet$sd2) -log(predhet$sd2))
-schetseq = mean(-(vm-predHetseq$mean)^2/(predHetseq$sd2) -log(predHetseq$sd2))
+schom = mean(-(vmNorm-predhom$mean)^2/(predhom$sd2) -log(predhom$sd2))
+schet = mean(-(vmNorm-predhet$mean)^2/(predhet$sd2) -log(predhet$sd2))
+schetseq = mean(-(vmNorm-predHetseq$mean)^2/(predHetseq$sd2) -log(predHetseq$sd2))
 
 
 dfscore = as.data.frame(cbind(-(vm-predhom$mean)^2/(predhom$sd2) -log(predhom$sd2),-(vm-predhet$mean)^2/(predhet$sd2) -log(predhet$sd2),-(vm-predHetseq$mean)^2/(predHetseq$sd2) -log(predHetseq$sd2)))
