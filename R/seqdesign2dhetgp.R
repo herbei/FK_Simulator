@@ -94,7 +94,7 @@ fk_simulator  = function(domain, sites, U, V, KX, KY, OXY, NPATHS){
 
 # function to be called by IMSPE_optim
 # v has dim 4: 2 first dimensions are long, lat, then KX and KY diffusion coefficients
-simulator = function(v,NPATHS=20) 
+simulator = function(v,NPATHS=10) 
 {
   #unnormalize
   long = v[1] * (domain[2]-domain[1]) + domain[1]
@@ -207,11 +207,15 @@ Y = matrix((out),Nrep*nrow(X),1,byrow = T)
 h <- rep(NA, nadd)
 #dim(Y)
 
-Xseq <- Xrep[1:(10*n),]
-Y <- Z[1:(10*n)]
+ ninitseq = 10
+#ninitseq = 4
+Xseq <- Xrep[1:(ninitseq*n),]
+Y <- Z[1:(ninitseq*n)]
 mod <- mleHetGP(Xseq, Y, lower=lower, upper=upper, covtype=covtype, 
                 noiseControl=nc, settings=settings, known=list(beta0=0), maxit=1000)
 
+
+nadd = nrow(Xrep)-nrow(Xseq)  
 
 for(i in 1:nadd) { 
   h[i] <- horizon(mod)
@@ -242,7 +246,7 @@ gridhetseq = as.data.frame(cbind(de[,1:2],predhetseqde$mean,predhetseqde$sd2,pre
 names(gridhetseq) = c("long","lat","mean","varmean","nug","psd")
 
 #save.image(file="Designseq2Dds.Rdata")
-
+save.image("design2Dpath10bis.Rdata")
 
 g <- ggplot(gridhetseq, aes(long, lat)) + geom_raster(aes(fill = psd), interpolate = TRUE) +scale_fill_gradientn(colours=matlab.like(10)) +geom_point(data=designseq,aes(x=long,y=lat,colour=rep))+scale_color_gradient(low="grey", high="black")
 print(g)

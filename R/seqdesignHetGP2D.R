@@ -1,6 +1,6 @@
 rm(list=ls())
 
-set.seed(12345)
+set.seed(123)
 
 ## fct definitions and loading some parameters
 load("fksettings.Rdata")
@@ -94,7 +94,7 @@ fk_simulator  = function(domain, sites, U, V, KX, KY, OXY, NPATHS){
 
 # function to be called by IMSPE_optim
 # v has dim 4: 2 first dimensions are long, lat, then KX and KY diffusion coefficients
-simulator = function(v,NPATHS=10) 
+simulator = function(v,NPATHS=6) 
 {
   #unnormalize
   long = v[1] * (domain[2]-domain[1]) + domain[1]
@@ -178,7 +178,7 @@ ggplot(gridhet, aes(long, lat)) + geom_raster(aes(fill = nug), interpolate = TRU
 ### Sequential design
 ninitseq = 10
 #ninitseq = 4
-n=50
+n=nrow(X0)
 Xseq <- X[1:(ninitseq*n),]
 Y <- Z[1:(ninitseq*n)]
 mod <- mleHetGP(Xseq, Y, lower=lower, upper=upper, covtype=covtype, 
@@ -223,4 +223,4 @@ g <- ggplot(gridhetseq, aes(long, lat)) + geom_raster(aes(fill = psd), interpola
 print(g)
 
 
-#save.image("designs2Ds.Rdata")
+save.image("designs2DnewversionHetGPlesspath.Rdata")

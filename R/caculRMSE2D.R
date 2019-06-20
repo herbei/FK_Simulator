@@ -49,7 +49,7 @@ schetseq = mean(-(vmNorm-predHetseq$mean)^2/(predHetseq$sd2) -log(predHetseq$sd2
 
 dfscore = as.data.frame(cbind(-(vm-predhom$mean)^2/(predhom$sd2) -log(predhom$sd2),-(vm-predhet$mean)^2/(predhet$sd2) -log(predhet$sd2),-(vm-predHetseq$mean)^2/(predHetseq$sd2) -log(predHetseq$sd2)))
 names(dfscore) = c("hom","het","seqhet")
-boxplot(dfscore,ylim=c(-20,2),main="scores")
+boxplot(dfscore,main="scores")
 
 
 

@@ -10,7 +10,10 @@ knitr::opts_chunk$set(echo = TRUE,echo=FALSE)
 #load("Designseq2D.Rdata")
 #load("Designseq2Dbis.Rdata")
 #load("designseq2D10paths2.Rdata")
-load("design2Dpath10.Rdata")
+#load("designs2Ds.Rdata")
+#load("designs2DnewversionHetGP.Rdata")
+#load("designs2DnewversionHetGPless.Rdata")
+load("designs2DnewversionHetGPlesspath.Rdata")
 library(ggplot2)
 library(colorRamps)
 library(hetGP)
@@ -21,18 +24,18 @@ gridhet$psd = sqrt(gridhet$nug+gridhet$varmean)
 ```
 
 ```{r unnormalize}
-gridHom$mean = gridHom$mean * SDnorm + Mnorm
-gridHom$varmean = gridHom$varmean * SDnorm^2
-gridHom$psd = gridHom$psd * SDnorm
-gridHom$nug = gridHom$nug * SDnorm^2
-gridhet$mean = gridhet$mean * SDnorm + Mnorm
-gridhet$varmean = gridhet$varmean * SDnorm^2
-gridhet$psd = gridhet$psd * SDnorm
-gridhet$nug = gridhet$nug * SDnorm^2
-gridhetseq$mean = gridhetseq$mean * SDnorm + Mnorm
-gridhetseq$varmean = gridhetseq$varmean * SDnorm^2
-gridhetseq$psd = gridhetseq$psd * SDnorm
-gridhetseq$nug = gridhetseq$nug * SDnorm^2
+gridHom$mean = gridHom$mean * sqrt(Zv) + Zm
+gridHom$varmean = gridHom$varmean * Zv
+gridHom$psd = gridHom$psd * sqrt(Zv)
+gridHom$nug = gridHom$nug * Zv
+gridhet$mean = gridhet$mean * sqrt(Zv) + Zm
+gridhet$varmean = gridhet$varmean * Zv
+gridhet$psd = gridhet$psd * sqrt(Zv)
+gridhet$nug = gridhet$nug * Zv
+gridhetseq$mean = gridhetseq$mean * sqrt(Zv) + Zm
+gridhetseq$varmean = gridhetseq$varmean * Zv
+gridhetseq$psd = gridhetseq$psd * sqrt(Zv)
+gridhetseq$nug = gridhetseq$nug * Zv
 ```
 
 
@@ -142,6 +145,7 @@ ggplot(gridhet, aes(long, lat)) + geom_raster(aes(fill = varmean ), interpolate 
 
 ```{r load data test}
 load("testdesign2D.Rdata")
+#vmNorm = (vm-Zm)/sqrt(Zv)
 library(hetGP)
 #Hom GP
 predhom = predict(x = testdesign, object = Ghom)
@@ -150,19 +154,24 @@ predhet = predict(x = testdesign, object = Ghet)
 #Het GP seq
 predHetseq = predict(x = testdesign, object = mod)
 # RMSE
-msehom = mean(((predhom$mean-vmNorm))^2)
-msehet = mean(((predhet$mean-vmNorm))^2)
-msehetseq = mean(((predHetseq$mean-vmNorm))^2)
+msehom = mean(((predhom$mean-Ztest.true))^2)
+msehet = mean(((predhet$mean-Ztest.true))^2)
+msehetseq = mean(((predHetseq$mean-Ztest.true))^2)
 # scores
-schom = mean(-(vmNorm-predhom$mean)^2/(predhom$sd2) -log(predhom$sd2))
-schet = mean(-(vmNorm-predhet$mean)^2/(predhet$sd2) -log(predhet$sd2))
-schetseq = mean(-(vmNorm-predHetseq$mean)^2/(predHetseq$sd2) -log(predHetseq$sd2))
+schom = mean(-(Ztest.true-predhom$mean)^2/(predhom$sd2) -log(predhom$sd2))
+schet = mean(-(Ztest.true-predhet$mean)^2/(predhet$sd2) -log(predhet$sd2))
+schetseq = mean(-(Ztest.true-predHetseq$mean)^2/(predHetseq$sd2) -log(predHetseq$sd2))
+# scores 2
+schom2 = mean(-(Ztest-predhom$mean)^2/(predhom$sd2+predhom$nugs) -log(predhom$sd2+predhom$nugs))
+schet2 = mean(-(Ztest-predhet$mean)^2/(predhet$sd2+predhet$nugs) -log(predhet$sd2+predhet$nugs))
+schetseq2 = mean(-(Ztest-predHetseq$mean)^2/(predHetseq$sd2+predHetseq$nugs) -log(predHetseq$sd2+predHetseq$nugs))
 ```
 
 
 ```{r results}
 c(rmsehom=msehom,rmsehet=msehet,rmsehetse=msehetseq)
 c(scorehom=schom,scorehet=schet,scorehetse=schetseq)
+c(scorehom=schom2,scorehet=schet2,scorehetse=schetseq2)
 ```
 
 
