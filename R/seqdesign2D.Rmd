@@ -127,6 +127,12 @@ Plot for nugget + predictive mean variance (in standard deviation)
 ggplot(gridhetseq, aes(long, lat)) + geom_raster(aes(fill = psd), interpolate = TRUE)+ scale_fill_gradientn(colours=matlab.like(10))+geom_point(data=designseq,aes(x=long,y=lat,colour=rep))+scale_color_gradient(low="grey", high="black")
 ```
 
+
+```{r psdhetseq withnumbers}
+ggplot(gridhetseq, aes(long, lat)) + geom_raster(aes(fill = psd), interpolate = TRUE)+ scale_fill_gradientn(colours=matlab.like(10))+geom_text(data=designseq,aes(x=long,y=lat,label=rep))
+```
+
+
 Predictive mean variance after adding the points sequentially
 
 ```{r varmean seq}
