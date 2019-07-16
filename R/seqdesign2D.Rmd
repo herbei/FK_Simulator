@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE,echo=FALSE)
+knitr::opts_chunk$set(echo = TRUE,echo=FALSE,cache = TRUE)
 #load("Designseq2D.Rdata")
 #load("Designseq2Dbis.Rdata")
 #load("designseq2D10paths2.Rdata")

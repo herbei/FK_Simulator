@@ -236,19 +236,44 @@ hist(calHet[,2], xlim=c(0,1), xlab="u2", main="het u2 posterior")
 abline(v=1/9, lwd=2, col=2)
 hist(calHet[,3], xlab="s2", main="het s2 posterior")
 
-save.image("FKcaliboutput2.Rdata")
+#save.image("FKcaliboutput2.Rdata")
+load("FKcaliboutput2.Rdata")
 
 dfcalhom = as.data.frame(calHom)
 names(dfcalhom) = c("u1","u2","s2")
 dfcalhom[,1:2] = dfcalhom[,1:2] * 900 +100
-hom1 = ggplot(dfcalhom,aes(x=u1,stat(density))) + geom_histogram(bins= 50) + theme_bw() + xlim(50,1000) + geom_vline(aes(xintercept=700),color="red")
-hom2 = ggplot(dfcalhom,aes(x=u2,stat(density))) + geom_histogram(bins = 50) + theme_bw() +xlim(50,1000)  + geom_vline(aes(xintercept=200),color="red")
-hom3 = ggplot(dfcalhom,aes(x=s2,stat(density))) + geom_histogram(bins = 50) + theme_bw() + xlim(1,7) + geom_vline(aes(xintercept=4),color="red")
+hom1 = ggplot(dfcalhom,aes(x=u1,stat(density))) + geom_histogram(bins= 30) + theme_bw() + xlim(50,1000) + geom_vline(aes(xintercept=700),color="red")
+hom2 = ggplot(dfcalhom,aes(x=u2,stat(density))) + geom_histogram(bins = 30) + theme_bw() +xlim(50,1000)  + geom_vline(aes(xintercept=200),color="red")
+hom3 = ggplot(dfcalhom,aes(x=s2,stat(density))) + geom_histogram(bins = 30) + theme_bw() + xlim(1,7) + geom_vline(aes(xintercept=4),color="red")
 dfcalhet = as.data.frame(calHet)
 names(dfcalhet) = c("u1","u2","s2")
 dfcalhet[,1:2] = dfcalhet[,1:2] * 900 +100
-het1 = ggplot(dfcalhet,aes(x=u1,stat(density))) + geom_histogram(bins = 50) + theme_bw() + xlim(50,1000) + geom_vline(aes(xintercept=700),color="red")
-het2 = ggplot(dfcalhet,aes(x=u2,stat(density))) + geom_histogram(bins = 50) + theme_bw() + xlim(50,1000) + geom_vline(aes(xintercept=200),color="red")
-het3 = ggplot(dfcalhet,aes(x=s2,stat(density))) + geom_histogram(bins=50) + theme_bw() + xlim(1,7) + geom_vline(aes(xintercept=4),color="red")
+het1 = ggplot(dfcalhet,aes(x=u1,stat(density))) + geom_histogram(bins = 30) + theme_bw() + xlim(50,1000) + geom_vline(aes(xintercept=700),color="red")
+het2 = ggplot(dfcalhet,aes(x=u2,stat(density))) + geom_histogram(bins = 30) + theme_bw() + xlim(50,1000) + geom_vline(aes(xintercept=200),color="red")
+het3 = ggplot(dfcalhet,aes(x=s2,stat(density))) + geom_histogram(bins=30) + theme_bw() + xlim(1,7) + geom_vline(aes(xintercept=4),color="red")
 
 grid.arrange(hom1,hom2,hom3,het1,het2,het3,nrow=2,ncol=3)
+
+
+
+
+dfcalhom = as.data.frame(calHom)
+names(dfcalhom) = c("u1","u2","s2")
+dfcalhom[,1:2] = dfcalhom[,1:2] * 900 +100
+hom1 = ggplot(dfcalhom,aes(x=u1,stat(density))) + geom_density() + theme_bw() + xlim(50,1000) + geom_vline(aes(xintercept=700),color="red")
+hom2 = ggplot(dfcalhom,aes(x=u2,stat(density))) + geom_density() + theme_bw() +xlim(50,1000)  + geom_vline(aes(xintercept=200),color="red")
+hom3 = ggplot(dfcalhom,aes(x=s2,stat(density))) + geom_density() + theme_bw() + xlim(1,7) + geom_vline(aes(xintercept=4),color="red")
+dfcalhet = as.data.frame(calHet)
+names(dfcalhet) = c("u1","u2","s2")
+dfcalhet[,1:2] = dfcalhet[,1:2] * 900 +100
+het1 = ggplot(dfcalhet,aes(x=u1,stat(density))) + geom_density() + theme_bw() + xlim(50,1000) + geom_vline(aes(xintercept=700),color="red")
+het2 = ggplot(dfcalhet,aes(x=u2,stat(density))) + geom_density() + theme_bw() + xlim(50,1000) + geom_vline(aes(xintercept=200),color="red")
+het3 = ggplot(dfcalhet,aes(x=s2,stat(density))) + geom_density() + theme_bw() + xlim(1,7) + geom_vline(aes(xintercept=4),color="red")
+
+grid.arrange(arrangeGrob(hom1,hom2,hom3,left="homGP"),arrangeGrob(het1,het2,het3,left="hetGP"),nrow=1,ncol=2)
+grid.arrange(t(arrangeGrob(hom1,hom2,hom3,top="homGP")),t(arrangeGrob(het1,het2,het3,top="hetGP")),nrow=2,ncol=1)
+grid.arrange(t(arrangeGrob(hom1,hom2,hom3,top="homGP")),t(arrangeGrob(het1,het2,het3,top="hetGP")),nrow=2,ncol=1)
+
+grid.arrange(arrangeGrob(hom1,hom2,hom3,left="homGP",ncol=3),arrangeGrob(het1,het2,het3,left="hetGP",ncol=3),nrow=2,ncol=1)
+grid.arrange(arrangeGrob(hom1,hom2,hom3,top="homGP",ncol=3),arrangeGrob(het1,het2,het3,top="hetGP",ncol=3),nrow=2,ncol=1)
+
