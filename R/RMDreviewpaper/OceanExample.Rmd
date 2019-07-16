@@ -21,7 +21,6 @@ library(mvtnorm)
 
 We load the simulator and some useful functions.
 ```{r fksettings}
-3+1
 source("SimulatorAndFunctions.R")
 ```
 
