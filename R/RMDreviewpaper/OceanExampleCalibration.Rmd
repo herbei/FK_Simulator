@@ -26,7 +26,8 @@ source("SimulatorAndFunctions.R")
 
 The seed is set for replication:
 ```{r seed}
-set.seed(123)
+seed = 1234
+set.seed(seed)
 ```
 
 
@@ -38,7 +39,7 @@ set.seed(123)
 
 ```{r sim field data}
 n = 150
-X0 = lhsDesign(n,2)
+X0 = lhsDesign(n,2,seed=seed)
 X0 = maximinSA_LHS(X0$design)$design
 u1 = (700 -100)/900  
 u2 = (200- 100)/900

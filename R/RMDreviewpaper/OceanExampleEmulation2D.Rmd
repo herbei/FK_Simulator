@@ -26,7 +26,8 @@ source("SimulatorAndFunctions.R")
 
 The seed is set for replication:
 ```{r seed}
-set.seed(123)
+seed=1234
+set.seed(seed)
 ```
 
 
@@ -38,7 +39,7 @@ set.seed(123)
 We start with a space filling design and we make $20$ replicates at each unique location.
 ```{r space filling design}
 n = 50
-X0 = lhsDesign(n,2)
+X0 = lhsDesign(n,2,seed=seed)
 X0 = maximinSA_LHS(X0$design)$design
 X <- rbind(X0, X0, X0, X0, X0, X0, X0, X0, X0, X0)
 X <- rbind(X, X)
