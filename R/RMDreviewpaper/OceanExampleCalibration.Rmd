@@ -1,0 +1,215 @@
+---
+title: "Ocean Example"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,cache=TRUE)
+```
+
+```{r packages,message=FALSE}
+library(ggplot2)
+library(colorRamps)
+library(gridExtra)
+library(DiceKriging)
+library(DiceDesign)
+library(hetGP)
+library(MCMCpack)
+library(lhs)
+library(mvtnorm)
+```
+
+We load the simulator and some useful functions.
+```{r fksettings}
+source("SimulatorAndFunctions.R")
+```
+
+The seed is set for replication:
+```{r seed}
+set.seed(123)
+```
+
+
+
+## Calibration
+
+
+### Simulation for field data 
+
+```{r sim field data}
+n = 150
+X0 = lhsDesign(n,2)
+X0 = maximinSA_LHS(X0$design)$design
+u1 = (700 -100)/900  
+u2 = (200- 100)/900
+Xfield = cbind(X0,u1,u2)
+library(parallel)
+Yfield = mclapply(1:n,function(i)
+{
+  mean(sapply(1:200,function(k) simulator4d(Xfield[i,])))
+},mc.cores = 10)
+Yfield = Reduce(c,Yfield)
+vareps = 2^2 
+Yfieldnoise = Yfield + rnorm(length(Yfield),0,sd=sqrt(vareps)) 
+Ym <- mean(Yfieldnoise)
+Yv <- var(Yfieldnoise)
+YfieldnoiseN <- (Yfieldnoise-Ym)/sqrt(Yv)
+```
+
+
+### Emulation for calibration
+
+```{r emulation calib}
+source("function_LHD_optim_grid.R")
+b_inf_theta=c(0,0)
+b_sup_theta=c(1,1)
+size_design = 500
+
+out = GRID_design(Xfield[,1:2],b_inf_theta,b_sup_theta,size_design)
+out_opt=maximinSA_LHS_grid(out,dim_xf=2,c=0.95,dim_theta=2,Imax=2000)
+#10 replicates
+Xsim = matrix(rep(t(out_opt),10),ncol=4,byrow = T)
+Ysim = apply(Xsim,1,simulator4d)
+YsimN = (Ysim-Ym)/sqrt(Yv)
+
+covtype <- "Matern5_2"
+noiseControl <- list(g_min=1e-6, g_bounds=c(1e-6, 1), lowerDelta=log(1e-6))
+settings <- list(linkThetas="none", initStrategy="smoothed", return.hom=TRUE)
+lower <- c(0.01, 0.01, 0.001, 0.001) 
+upper <- c(30, 30, 100, 100) 
+
+het <- mleHetGP(Xsim, YsimN, lower=lower, upper=upper, covtype=covtype, noiseControl=noiseControl, 
+                settings=settings, maxit=10000)
+hom <- het$modHom
+```
+
+
+### Calibration
+
+After defining the likelihood function, we run an MCMC sampler.
+
+```{r calibration}
+lpost.invert <- function(theta, XF, yF, GP)
+{
+  ## input processing and checking
+  if(length(theta) != ncol(GP$X0) - ncol(XF) + 1) 
+    stop("length(theta), ncol(XF), ncol(GP$X0) mismatch")
+  u <- theta[-length(theta)]
+  s2 <- theta[length(theta)]
+  
+  ## prior checking  
+  if(any(u < 0 | u > 1)) return (-Inf)
+  if(s2 < 0) return(-Inf)
+  
+  ## derive predictive distribution for XF paired with u
+  XFU <- cbind(XF, matrix(rep(u, nrow(XF)), ncol=length(u), byrow=TRUE)) 
+  p <- predict(GP, XFU, xprime=XFU)
+  C <- s2*diag(nrow(p$cov)) + (p$cov + t(p$cov))/2 
+  
+  ## gaussian log density evaluation for yF under that predictive
+  return(dmvnorm(yF, p$mean, C, log=TRUE) - log(s2))
+}
+
+
+Vrw <- diag(c(2e-3, 2e-3, 3e-5))
+calHom <- MCMCmetrop1R(lpost.invert, XF=Xfield[,1:2], yF=YfieldnoiseN, GP=hom, logfun=TRUE, theta.init=c(0.5,0.5,1), 
+                       burnin=1000, mcmc=2e4, V=Vrw)
+
+calHet <- MCMCmetrop1R(lpost.invert, XF=Xfield[,1:2], yF=YfieldnoiseN, GP=het, logfun=TRUE, theta.init=c(0.5,0.5,1), 
+                       burnin=1000, mcmc=2e4, V=Vrw)
+```
+
+
+
+
+
+
+### Calibration from a sequential design
+
+
+```{r init seq}
+#8 replicates kept
+Xsim.init = Xsim[1:(8*size_design),]
+Ysim.init = YsimN[1:(8*size_design)]
+
+covtype <- "Matern5_2"
+noiseControl <- list(g_min=1e-6, g_bounds=c(1e-6, 1), lowerDelta=log(1e-6))
+settings <- list(linkThetas="none", initStrategy="smoothed", return.hom=FALSE)
+lower <- c(0.01, 0.01, 0.001, 0.001) 
+upper <- c(30, 30, 100, 100) 
+
+mod <- mleHetGP(Xsim.init, Ysim.init, lower=lower, upper=upper, covtype=covtype, noiseControl=noiseControl, 
+                settings=settings, maxit=10000)
+```
+
+
+
+```{r seq design,results="hide"}
+Xseq = Xsim.init
+Yseq = Ysim.init
+nadd = nrow(Xsim)-nrow(Xseq)  
+control <- list(tol_dist=1e-4, tol_diff=1e-4, multi.start=30)
+
+
+h <- rep(NA, nadd)
+## acquisitions
+for(i in 1:nadd) { 
+  
+  ## choose lookahead horizon and solve IMSPE
+  h[i] <- horizon(mod)
+  opt <- IMSPE_optim(mod, h[i], control=control)
+  cat("i=", i, ", h=", h[i], "\n", sep="")
+  
+  ## evaluate the simulator
+  ynew <- (simulator4d(opt$par)-Ym) / sqrt(Yv)
+  
+  ## update the fit
+  mod <- update(mod, Xnew=opt$par, Znew=ynew, ginit=mod$g*1.01)
+  if(i %% 25 == 0){
+    mod2 <- mleHetGP(list(X0=mod$X0, Z0=mod$Z0, mult=mod$mult),
+                     Z=mod$Z, lower=lower, upper=upper, covtype=covtype, 
+                     noiseControl=noiseControl, settings=settings, known=list(beta0=0), 
+                     maxit=1000)
+    if(mod2$ll > mod$ll) mod <- mod2  
+  }
+}
+seqGhet = mod
+```
+
+
+```{r calseq}
+calHetseq <- MCMCmetrop1R(lpost.invert, XF=Xfield[,1:2], yF=YfieldnoiseN, GP=seqGhet, logfun=TRUE, theta.init=c(0.5,0.5,1),                     burnin=1000, mcmc=2e4, V=Vrw)
+```
+
+
+```{r graph calib}
+dfcalhom = as.data.frame(calHom)
+names(dfcalhom) = c("u1","u2","s2")
+dfcalhom[,1:2] = dfcalhom[,1:2] * 900 +100
+dfcalhom[,3] = dfcalhom[,3] * Yv
+hom1 = ggplot(dfcalhom,aes(x=u1,stat(density))) + geom_density() + theme_bw() + xlim(50,1000) + geom_vline(aes(xintercept=700),color="red")
+hom2 = ggplot(dfcalhom,aes(x=u2,stat(density))) + geom_density() + theme_bw() +xlim(50,1000)  + geom_vline(aes(xintercept=200),color="red")
+hom3 = ggplot(dfcalhom,aes(x=s2,stat(density))) + geom_density() + theme_bw() + xlim(1,7) + geom_vline(aes(xintercept=4),color="red")
+dfcalhet = as.data.frame(calHet)
+names(dfcalhet) = c("u1","u2","s2")
+dfcalhet[,1:2] = dfcalhet[,1:2] * 900 +100
+dfcalhet[,3] = dfcalhet[,3] * Yv
+het1 = ggplot(dfcalhet,aes(x=u1,stat(density))) + geom_density() + theme_bw() + xlim(50,1000) + geom_vline(aes(xintercept=700),color="red")
+het2 = ggplot(dfcalhet,aes(x=u2,stat(density))) + geom_density() + theme_bw() + xlim(50,1000) + geom_vline(aes(xintercept=200),color="red")
+het3 = ggplot(dfcalhet,aes(x=s2,stat(density))) + geom_density() + theme_bw() + xlim(1,7) + geom_vline(aes(xintercept=4),color="red")
+dfcalhetseq = as.data.frame(calHetseq)
+names(dfcalhetseq) = c("u1","u2","s2")
+dfcalhetseq[,1:2] = dfcalhetseq[,1:2] * 900 +100
+dfcalhetseq[,3] = dfcalhetseq[,3] * Yv
+hetseq1 = ggplot(dfcalhetseq,aes(x=u1,stat(density))) + geom_density() + theme_bw() + xlim(50,1000) + geom_vline(aes(xintercept=700),color="red")
+hetseq2 = ggplot(dfcalhetseq,aes(x=u2,stat(density))) + geom_density() + theme_bw() + xlim(50,1000) + geom_vline(aes(xintercept=200),color="red")
+hetseq3 = ggplot(dfcalhetseq,aes(x=s2,stat(density))) + geom_density() + theme_bw() + xlim(1,7) + geom_vline(aes(xintercept=4),color="red")
+grid.arrange(arrangeGrob(hom1,hom2,hom3,top="homGP",ncol=3),arrangeGrob(het1,het2,het3,top="hetGP",ncol=3),
+             arrangeGrob(hetseq1,hetseq2,hetseq3,top="seq hetGP",ncol=3),nrow=3,ncol=1)
+```
+
+```{r print}
+Yv
+summary(calHetseq)
+```
+
