@@ -132,3 +132,51 @@ schetseq2 = mean(-(Ztest-predHetseq$mean)^2/(predHetseq$sd2+predHetseq$nugs) -lo
 ## ----results-------------------------------------------------------------
 return(c(rmsehom=msehom,rmsehet=msehet,rmsehetse=msehetseq,scorehom=schom,scorehet=schet,scorehetse=schetseq,scorehom=schom2,scorehet=schet2,scorehetse=schetseq2))
 },mc.cores=10)
+
+
+#save(RESrep,seed,file="RepetitonEmulation.Rdata")
+
+
+library(ggplot2)
+library(plyr)
+library(reshape2)
+
+
+RES = Reduce(rbind,RESrep)
+dim(RES)
+
+#MSE
+RMSE = melt(RES[,1:3])
+names(RMSE) = c("v","GP","MSE")
+levels(RMSE$GP)
+RMSE$GP =revalue(RMSE$GP, c("rmsehom"="homGP", "rmsehet"="hetGP","rmsehetse"="seqhetGP"))
+p1=ggplot(RMSE,aes(x=GP,y=MSE))+theme_bw()+geom_boxplot()
+
+
+#score Mean
+ScoreMean = melt(RES[,4:6])
+names(ScoreMean) = c("v","GP","ScoreMean")
+levels(ScoreMean$GP)
+ScoreMean$GP =revalue(ScoreMean$GP, c("scorehom"="homGP", "scorehet"="hetGP","scorehetse"="seqhetGP"))
+p2=ggplot(ScoreMean,aes(x=GP,y=ScoreMean))+theme_bw()+geom_boxplot()
+
+#Score
+Score = melt(RES[,7:9])
+names(Score) = c("v","GP","Score")
+levels(Score$GP)
+Score$GP =revalue(Score$GP, c("scorehom"="homGP", "scorehet"="hetGP","scorehetse"="seqhetGP"))
+p3=ggplot(Score,aes(x=GP,y=Score))+theme_bw()+geom_boxplot()
+
+pdf(file="BoxplotEmulation.pdf")
+grid.arrange(p1,p2,p3,nrow=1)
+dev.off()
+
+
+dfmprob = as.data.frame(mprob)
+names(dfmprob)=c("t","Ig","Id","Te","Tp","Te.or.Tp")
+meltData <- melt(dfmprob)
+names(meltData)=c("input","prob")
+p <- ggplot(meltData, aes(input,prob)) 
+pdf("PVbox.pdf")
+p + geom_boxplot() +theme_bw()+ylab("prob of activeness")
+dev.off()

@@ -87,6 +87,14 @@ hom <- het$modHom
 
 ### Calibration
 
+```{r calibration settings}
+Vrw <- diag(c(2e-3, 2e-3, 3e-5)) # variance of Random Walk
+nMCMC = 2e4
+nburnin = 1000
+```
+
+
+
 After defining the likelihood function, we run an MCMC sampler.
 
 ```{r calibration}
@@ -112,12 +120,12 @@ lpost.invert <- function(theta, XF, yF, GP)
 }
 
 
-Vrw <- diag(c(2e-3, 2e-3, 3e-5))
+
 calHom <- MCMCmetrop1R(lpost.invert, XF=Xfield[,1:2], yF=YfieldnoiseN, GP=hom, logfun=TRUE, theta.init=c(0.5,0.5,1), 
-                       burnin=1000, mcmc=2e4, V=Vrw)
+                       burnin=nburnin, mcmc=nMCMC, V=Vrw)
 
 calHet <- MCMCmetrop1R(lpost.invert, XF=Xfield[,1:2], yF=YfieldnoiseN, GP=het, logfun=TRUE, theta.init=c(0.5,0.5,1), 
-                       burnin=1000, mcmc=2e4, V=Vrw)
+                       burnin=nburnin, mcmc=nMCMC, V=Vrw)
 ```
 
 
@@ -179,7 +187,7 @@ seqGhet = mod
 
 
 ```{r calseq}
-calHetseq <- MCMCmetrop1R(lpost.invert, XF=Xfield[,1:2], yF=YfieldnoiseN, GP=seqGhet, logfun=TRUE, theta.init=c(0.5,0.5,1),                     burnin=1000, mcmc=2e4, V=Vrw)
+calHetseq <- MCMCmetrop1R(lpost.invert, XF=Xfield[,1:2], yF=YfieldnoiseN, GP=seqGhet, logfun=TRUE, theta.init=c(0.5,0.5,1),                     burnin=nburnin, mcmc=nMCMC, V=Vrw)
 ```
 
 
@@ -209,8 +217,50 @@ grid.arrange(arrangeGrob(hom1,hom2,hom3,top="homGP",ncol=3),arrangeGrob(het1,het
              arrangeGrob(hetseq1,hetseq2,hetseq3,top="seq hetGP",ncol=3),nrow=3,ncol=1)
 ```
 
-```{r print}
-Yv
-summary(calHetseq)
+
+## Uncertainty Reduction after Calibration
+
+```{r prediction hom}
+load("testdesign2D.Rdata")
+# select a location
+nloc=6
+iloc = 1:nloc
+loc = testdesign[iloc,]
+Ztrue = vm[iloc]
+# pred
+ZpredhomGPcal = numeric(nMCMC-nburnin)
+ZpredhomGPnoncal = numeric(nMCMC-nburnin)
+for (k in 1:(nMCMC-nburnin))
+{
+  pcal <- predict(hom, matrix(c(loc,rep(calHom[k+burnin,1:2],each=nloc)),nrow=nloc))
+  p = predict(hom, matrix(c(loc,rep(runif(2),each=nloc)),nrow=nloc))
+  ZpredhomGPnoncal[k] = (p$mean + rnorm(1,0,sqrt(p$sd2)))*sqrt(Yv) + Ym + rnorm(1,0,sqrt(vareps))
+  ZpredhomGPcal[k] = (pcal$mean + rnorm(1,0,sqrt(pcal$sd2)))*sqrt(Yv) + Ym + rnorm(1,0,sqrt(vareps))
+}
+```
+
+```{r prediction het}
+ZpredhetGPcal = numeric(nMCMC-nburnin)
+ZpredhetGPnoncal = numeric(nMCMC-nburnin)
+for (k in 1:(nMCMC-nburnin))
+{
+  pcal <- predict(het, matrix(c(loc,rep(calHet[k+burnin,1:2],each=nloc)),nrow=nloc))
+  p = predict(het, matrix(c(loc,rep(runif(2),each=nloc)),nrow=nloc))
+  ZpredhetGPnoncal[k] = (p$mean + rnorm(1,0,sqrt(p$sd2)))*sqrt(Yv) + Ym + rnorm(1,0,sqrt(vareps))
+  ZpredhetGPcal[k] = (pcal$mean + rnorm(1,0,sqrt(pcal$sd2)))*sqrt(Yv) + Ym + rnorm(1,0,sqrt(vareps))
+}
+```
+
+
+```{r prediction hetseq}
+ZpredsehetGPcal = numeric(nMCMC-nburnin)
+ZpredsehetGPnoncal = numeric(nMCMC-nburnin)
+for (k in 1:(nMCMC-nburnin))
+{
+  pcal <- predict(seqGhet, matrix(c(loc,rep(calHetseq[k+burnin,1:2],each=nloc)),nrow=nloc))
+  p = predict(seqGhet, matrix(c(loc,rep(runif(2),each=nloc)),nrow=nloc))
+  ZpredsehetGPnoncal[k] = (p$mean + rnorm(1,0,sqrt(p$sd2)))*sqrt(Yv) + Ym + rnorm(1,0,sqrt(vareps))
+  ZpredsehetGPcal[k] = (pcal$mean + rnorm(1,0,sqrt(pcal$sd2)))*sqrt(Yv) + Ym + rnorm(1,0,sqrt(vareps))
+}
 ```
 
