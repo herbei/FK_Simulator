@@ -223,44 +223,70 @@ grid.arrange(arrangeGrob(hom1,hom2,hom3,top="homGP",ncol=3),arrangeGrob(het1,het
 ```{r prediction hom}
 load("testdesign2D.Rdata")
 # select a location
-nloc=6
+nloc=10
 iloc = 1:nloc
 loc = testdesign[iloc,]
 Ztrue = vm[iloc]
 # pred
-ZpredhomGPcal = numeric(nMCMC-nburnin)
-ZpredhomGPnoncal = numeric(nMCMC-nburnin)
+ZpredhomGPcal = matrix(NA,nMCMC-nburnin,nloc)
+ZpredhomGPnoncal = matrix(NA,nMCMC-nburnin,nloc)
 for (k in 1:(nMCMC-nburnin))
 {
-  pcal <- predict(hom, matrix(c(loc,rep(calHom[k+burnin,1:2],each=nloc)),nrow=nloc))
+  pcal <- predict(hom, matrix(c(loc,rep(calHom[k+nburnin,1:2],each=nloc)),nrow=nloc))
   p = predict(hom, matrix(c(loc,rep(runif(2),each=nloc)),nrow=nloc))
-  ZpredhomGPnoncal[k] = (p$mean + rnorm(1,0,sqrt(p$sd2)))*sqrt(Yv) + Ym + rnorm(1,0,sqrt(vareps))
-  ZpredhomGPcal[k] = (pcal$mean + rnorm(1,0,sqrt(pcal$sd2)))*sqrt(Yv) + Ym + rnorm(1,0,sqrt(vareps))
+  ZpredhomGPnoncal[k,] = (p$mean + rnorm(nloc,0,sqrt(p$sd2)))*sqrt(Yv) + Ym + rnorm(nloc,0,sqrt(vareps))
+  ZpredhomGPcal[k,] = (pcal$mean + rnorm(nloc,0,sqrt(pcal$sd2)))*sqrt(Yv) + Ym + rnorm(nloc,0,sqrt(vareps))
 }
 ```
 
 ```{r prediction het}
-ZpredhetGPcal = numeric(nMCMC-nburnin)
-ZpredhetGPnoncal = numeric(nMCMC-nburnin)
+print("het")
+ZpredhetGPcal = matrix(NA,nMCMC-nburnin,nloc)
+ZpredhetGPnoncal = matrix(NA,nMCMC-nburnin,nloc)
 for (k in 1:(nMCMC-nburnin))
 {
-  pcal <- predict(het, matrix(c(loc,rep(calHet[k+burnin,1:2],each=nloc)),nrow=nloc))
+  pcal <- predict(het, matrix(c(loc,rep(calHet[k+nburnin,1:2],each=nloc)),nrow=nloc))
   p = predict(het, matrix(c(loc,rep(runif(2),each=nloc)),nrow=nloc))
-  ZpredhetGPnoncal[k] = (p$mean + rnorm(1,0,sqrt(p$sd2)))*sqrt(Yv) + Ym + rnorm(1,0,sqrt(vareps))
-  ZpredhetGPcal[k] = (pcal$mean + rnorm(1,0,sqrt(pcal$sd2)))*sqrt(Yv) + Ym + rnorm(1,0,sqrt(vareps))
+  ZpredhetGPnoncal[k,] = (p$mean + rnorm(nloc,0,sqrt(p$sd2)))*sqrt(Yv) + Ym + rnorm(nloc,0,sqrt(vareps))
+  ZpredhetGPcal[k,] = (pcal$mean + rnorm(nloc,0,sqrt(pcal$sd2)))*sqrt(Yv) + Ym + rnorm(nloc,0,sqrt(vareps))
 }
 ```
 
 
 ```{r prediction hetseq}
-ZpredsehetGPcal = numeric(nMCMC-nburnin)
-ZpredsehetGPnoncal = numeric(nMCMC-nburnin)
+print("hetseq")
+ZpredsehetGPcal = matrix(NA,nMCMC-nburnin,nloc)
+ZpredsehetGPnoncal = matrix(NA,nMCMC-nburnin,nloc)
 for (k in 1:(nMCMC-nburnin))
 {
-  pcal <- predict(seqGhet, matrix(c(loc,rep(calHetseq[k+burnin,1:2],each=nloc)),nrow=nloc))
+  pcal <- predict(seqGhet, matrix(c(loc,rep(calHetseq[k+nburnin,1:2],each=nloc)),nrow=nloc))
   p = predict(seqGhet, matrix(c(loc,rep(runif(2),each=nloc)),nrow=nloc))
-  ZpredsehetGPnoncal[k] = (p$mean + rnorm(1,0,sqrt(p$sd2)))*sqrt(Yv) + Ym + rnorm(1,0,sqrt(vareps))
-  ZpredsehetGPcal[k] = (pcal$mean + rnorm(1,0,sqrt(pcal$sd2)))*sqrt(Yv) + Ym + rnorm(1,0,sqrt(vareps))
+  ZpredsehetGPnoncal[k,] = (p$mean + rnorm(nloc,0,sqrt(p$sd2)))*sqrt(Yv) + Ym + rnorm(nloc,0,sqrt(vareps))
+  ZpredsehetGPcal[k,] = (pcal$mean + rnorm(nloc,0,sqrt(pcal$sd2)))*sqrt(Yv) + Ym + rnorm(nloc,0,sqrt(vareps))
+}
+```
+
+
+
+```{r test34}
+testdesign[iloc,]
+dim(ZpredhetGPcal)
+```
+
+
+```{r plot pred,warnings=FALSE}
+library(reshape2)
+for (k in 1:nloc){
+dfpredhom = data.frame(cal=ZpredhomGPcal[,k],noncal = ZpredhomGPnoncal[,k] )
+df2predhom = melt(dfpredhom)
+ghom = ggplot(df2predhom,aes(x=value, fill=variable)) + geom_density(alpha=0.25)+ theme_bw()  + geom_vline(aes(xintercept=Ztrue[k]),color="red")+ggtitle("homGP") 
+dfpredhet = data.frame(cal=ZpredhetGPcal[,k],noncal = ZpredhetGPnoncal[,k] )
+df2predhet = melt(dfpredhet)
+ghet = ggplot(df2predhet,aes(x=value, fill=variable)) + geom_density(alpha=0.25)+ theme_bw()  + geom_vline(aes(xintercept=Ztrue[k]),color="red")+ggtitle("hetGP") 
+dfpredsehet = data.frame(cal=ZpredsehetGPcal[,k],noncal = ZpredsehetGPnoncal[,k] )
+df2predsehet = melt(dfpredsehet)
+ghetseq = ggplot(df2predsehet,aes(x=value, fill=variable)) + geom_density(alpha=0.25)+ theme_bw()  + geom_vline(aes(xintercept=Ztrue[k]),color="red")+ggtitle("seqhetGP") 
+print(grid.arrange(ghom,ghet,ghetseq))
 }
 ```
 
